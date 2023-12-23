@@ -110,7 +110,7 @@ class ArticleController extends Controller
 
     }
 
-    //get all articles from slug
+    //get articles slug wise
     public function getSlugArticle(Request $request)
     {
 
