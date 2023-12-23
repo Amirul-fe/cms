@@ -24,7 +24,10 @@ class ArticleController extends Controller
 
     public function index()
     {
-        $data = ArticleResource::collection(Article::get());
+        $articles = Article::with(['categories', 'author:id,name'])
+            ->select('id', 'title', 'slug', 'content', 'author_id', 'published_at')
+            ->get();
+        $data = ArticleResource::collection($articles);
 
         return $this->apiResponse(1, 'Successfully retrieved articles', $data);
     }
@@ -91,6 +94,7 @@ class ArticleController extends Controller
         }
     }
 
+    //get all articles from category
     public function getCategoryArticle(Request $request)
     {
         try {
@@ -106,6 +110,7 @@ class ArticleController extends Controller
 
     }
 
+    //get all articles from slug
     public function getSlugArticle(Request $request)
     {
 
@@ -122,6 +127,7 @@ class ArticleController extends Controller
 
     }
 
+    //get auth user Articles
     public function getUserArticle()
     {
         try {

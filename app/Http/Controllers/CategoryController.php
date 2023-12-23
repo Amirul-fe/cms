@@ -16,9 +16,11 @@ class CategoryController extends Controller
 
     public function index()
     {
-        $categories = CategoryResource::collection(Category::get());
+        $categories = Category::select('id', 'name')->get();
 
-        return $this->apiResponse(1, 'Successfully retrieved category', $categories);
+        $data = CategoryResource::collection($categories);
+
+        return $this->apiResponse(1, 'Successfully retrieved category', $data);
     }
 
     public function store(CategoryRequest $request)

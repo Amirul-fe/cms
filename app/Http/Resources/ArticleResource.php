@@ -19,6 +19,7 @@ class ArticleResource extends JsonResource
             'title' => $this->title,
             'content' => $this->content,
             'slug' => $this->slug,
+            'author' => $this->author,
             'categories' => CategoryResource::collection($this->categories),
         ];
     }
