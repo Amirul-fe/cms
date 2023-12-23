@@ -7,27 +7,27 @@ use App\Http\Requests\ArticleUpdateRequest;
 use App\Http\Resources\ArticleResource;
 use App\Models\Article;
 use App\Models\Category;
+use App\Repositories\ArticleRepository;
 use App\Traits\ApiTraits;
 use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Str;
 
 class ArticleController extends Controller
 {
     use ApiTraits;
 
-    public function __construct()
+    private $articleRepository;
+
+    public function __construct(ArticleRepository $articleRepository)
     {
         $this->middleware('auth:api');
+        $this->articleRepository = $articleRepository;
     }
 
     public function index()
     {
-        $articles = Article::with(['categories', 'author:id,name'])
-            ->select('id', 'title', 'slug', 'content', 'author_id', 'published_at')
-            ->get();
-        $data = ArticleResource::collection($articles);
+        $data = $this->articleRepository->index();
 
         return $this->apiResponse(1, 'Successfully retrieved articles', $data);
     }
@@ -36,16 +36,7 @@ class ArticleController extends Controller
     {
         try {
 
-            $article = Article::create([
-                'title' => $request->title,
-                'slug' => Str::slug($request->title, '-'),
-                'content' => $request->content,
-                'author_id' => Auth::user()->id,
-                'published_at' => now(),
-            ]);
-            $article->categories()->attach($request['categories']);
-
-            $data = new ArticleResource($article);
+            $data = $this->articleRepository->store($request);
 
             return $this->apiResponse(1, 'Successfully created', $data);
         } catch (Exception $e) {
@@ -55,22 +46,22 @@ class ArticleController extends Controller
 
     }
 
+    public function show(Request $request)
+    {
+        try {
+            $article = $this->articleRepository->show($request);
+
+            return $this->apiResponse(1, 'Successfully Article retrieve', $article);
+        } catch (Exception $e) {
+            return $this->apiResponse(0, $e->getMessage());
+        }
+
+    }
+
     public function update(ArticleUpdateRequest $request)
     {
         try {
-            $article = Article::findOrFail($request->id);
-
-            $article->update([
-                'title' => $request->title,
-                'slug' => Str::slug($request->title, '-'),
-                'content' => $request->content,
-                'author_id' => Auth::user()->id,
-                'published_at' => now(),
-            ]);
-
-            $article->categories()->sync($request['categories']);
-
-            $data = new ArticleResource($article);
+            $data = $this->articleRepository->update($request);
 
             return $this->apiResponse(1, 'Successfully Updated Article', $data);
 
@@ -83,9 +74,7 @@ class ArticleController extends Controller
     public function delete(Request $request)
     {
         try {
-            $article = Article::findOrFail($request->id);
-            $article->categories()->detach();
-            $article->delete();
+            $this->articleRepository->delete($request);
 
             return $this->apiResponse(1, 'Article deleted successfully');
         } catch (Exception $e) {
@@ -131,7 +120,9 @@ class ArticleController extends Controller
     public function getUserArticle()
     {
         try {
-            $articles = Article::where('author_id', auth()->user()->id)->get();
+            $articles = Article::with(['categories', 'author:id,name'])
+                ->where('author_id', auth()->user()->id)
+                ->get();
 
             $data = ArticleResource::collection($articles);
 

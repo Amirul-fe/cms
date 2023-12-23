@@ -4,8 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\CategoryRequest;
 use App\Http\Requests\CategoryUpdateRequest;
-use App\Http\Resources\CategoryResource;
-use App\Models\Category;
+use App\Repositories\CategoryRepository;
 use App\Traits\ApiTraits;
 use Exception;
 use Illuminate\Http\Request;
@@ -14,11 +13,18 @@ class CategoryController extends Controller
 {
     use ApiTraits;
 
+    private $categoryRepository;
+
+    public function __construct(CategoryRepository $categoryRepository)
+    {
+        $this->middleware('auth:api');
+        $this->categoryRepository = $categoryRepository;
+    }
+
     public function index()
     {
-        $categories = Category::select('id', 'name')->get();
 
-        $data = CategoryResource::collection($categories);
+        $data = $this->categoryRepository->index();
 
         return $this->apiResponse(1, 'Successfully retrieved category', $data);
     }
@@ -27,36 +33,34 @@ class CategoryController extends Controller
     {
 
         try {
-            $category = Category::create([
-                'name' => $request->name,
-            ]);
+            $category = $this->categoryRepository->store($request);
 
             return $this->apiResponse(1, 'Successfully created category', $category);
         } catch (Exception $e) {
 
             return $this->apiResponse(0, $e->getMessage());
         }
-
     }
 
     public function edit(Request $request)
     {
-        $category = Category::findorFail($request->id);
+        try {
+            $category = $this->categoryRepository->show($request);
 
-        return $this->apiResponse(1, 'Successfully data retrieve', $category);
+            return $this->apiResponse(1, 'Successfully data retrieve', $category);
+        } catch (Exception $e) {
+            return $this->apiResponse(0, $e->getMessage());
+        }
+
     }
 
     public function update(CategoryUpdateRequest $request)
     {
 
         try {
-            $category = Category::findOrFail($request->id);
+            $category = $this->categoryRepository->update($request);
 
-            $category->update([
-                'name' => $request->name,
-            ]);
-
-            return $this->apiResponse(1, 'Successfully Category updated', $category);
+            return $this->apiResponse(1, 'Successfully Category updated');
         } catch (Exception $e) {
 
             return $this->apiResponse(0, $e->getMessage());
@@ -67,9 +71,7 @@ class CategoryController extends Controller
     public function delete(Request $request)
     {
         try {
-            $category = Category::findOrFail($request->id);
-            $category->articles()->detach();
-            $category->delete();
+            $this->categoryRepository->delete($request);
 
             return $this->apiResponse(1, 'Category deleted successfull');
         } catch (Exception $e) {
